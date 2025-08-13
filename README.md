@@ -1,60 +1,98 @@
-# Path-Aware Network Security Monitor & DDoS Defense System
+# 🛡️ Sentinel — Path-Aware Network Security + DDoS Defense
 
-A comprehensive network security solution combining SCION-inspired path-aware monitoring with lightweight DDoS protection mechanisms.
+A **one-stop network-security engine** that fuses **SCION-style path validation** with **lightweight, ML-assisted DDoS protection**.
 
-## Features
+---
 
-- **Path-Aware Monitoring**: RSA-based cryptographic path validation and routing anomaly detection
-- **DDoS Defense**: Token bucket rate limiting, ML-based anomaly detection, and automatic IP blocking
-- **Real-time Analysis**: Live packet capture and processing with comprehensive logging
-- **Modular Design**: Run components individually or integrated together
+## ✨ Features
 
-## Quick Start
+- **🔍 Path-Aware Monitoring** — RSA-backed path signatures, hop-by-hop anomaly detection.  
+- **🚫 DDoS Defense** — Token-bucket rate-limiting, Isolation-Forest traffic profiling, auto-blocking via `iptables`.  
+- **📊 Real-Time Analytics** — Live packet capture with structured JSON logs.  
+- **🧩 Modular Design** — Run Path Monitor, DDoS Defense, or the full stack independently.
 
-- After running bootstrap.sh
+---
+
+## ⚡ Quick Start
+
+```bash
+# 1️⃣  Bootstrap source tree
+./bootstrap.sh
+
+# 2️⃣  Install system & Python dependencies
 ./setup.sh
 
-List available network interfaces
+# 3️⃣  List visible interfaces
 python3 main.py --list-interfaces
 
-Run integrated system (both components)
+```
+
+## 🚀 Run Modes
+
+```bash
+# Integrated (recommended)
 python3 main.py -i eth0 --mode integrated
 
-Run individual components
+# Only path-aware monitor
 python3 main.py -i eth0 --mode path-only
+
+# Only DDoS defense
 python3 main.py -i eth0 --mode ddos-only
 
-Test on loopback interface (no special privileges needed)
-python3 main.py -i lo --mode integrated
+# Safe local test
+python3 main.py -i lo  --mode integrated
+```
 
+## 🐳 Docker Deployment
 
-## System Requirements
+```
+docker build -t sentinel .
+docker run --rm --privileged --network host \
+           sentinel -i eth0 --mode integrated -t 60
+```
 
-- Ubuntu 18.04+ or similar Linux distribution
-- Python 3.7+
-- Root privileges for packet capture and iptables management
-- Network interface with packet capture capabilities
+## 🖥️ System Requirements
 
-## Configuration
+- **OS:** Ubuntu 18.04 + (or comparable Linux)  
+- **Python:** 3.7 +  
+- **Capabilities:** `CAP_NET_RAW` & `CAP_NET_ADMIN` for packet capture  
+- **Networking:** An active network interface  
 
-Edit `config/config.json` to customize:
-- Network interfaces and monitoring settings
-- Cryptographic parameters for path validation
-- Token bucket rates and ML detection thresholds
-- Logging levels and output formats
+---
 
-## Security Notes
+## ⚙️ Configuration
 
-- Packet capture requires capabilities: `sudo setcap cap_net_raw,cap_net_admin+eip $(which python3)`
-- iptables integration requires root privileges for automatic IP blocking
-- Monitor logs in `logs/` directory for security events and system status
+`config/config.json`:
 
-## Architecture
+| Section                 | Purpose                                     |
+|-------------------------|---------------------------------------------|
+| `network_interfaces.*`  | Choose default device, exclusions           |
+| `path_validation.*`     | Key size, signature TTL                     |
+| `ddos_protection.*`     | Bucket capacity, ML window, update cadence  |
+| `logging.*`             | Log level, rotation size, backups           |
 
-- **PathValidator**: RSA-2048 signatures with SHA-256 hashing for path integrity
-- **PathAnalyzer**: NetworkX-based topology analysis and anomaly detection
-- **TokenBucket**: Rate limiting implementation with configurable parameters
-- **MLAnomalyDetector**: Isolation Forest algorithm for traffic pattern analysis
-- **IPTablesManager**: Linux firewall integration for dynamic blocking
+---
 
-This system demonstrates advanced network security concepts from academic research translated into practical, deployable tools.
+## 🔐 Security Notes
+
+Grant capture capabilities (once):
+
+```bash
+sudo setcap cap_net_raw,cap_net_admin+eip $(which python3)
+```
+
+- `iptables` actions require root privileges (or run inside a privileged container).  
+- All security events are logged to `logs/`.
+
+---
+
+## 🏗️ Architecture Overview
+
+| Module                | Core Idea                        | Tech Highlights                          |
+|-----------------------|-----------------------------------|-------------------------------------------|
+| **PathValidator**     | Cryptographic path integrity      | RSA-2048 ✚ SHA-256                        |
+| **PathAnalyzer**      | Topology anomaly detection        | NetworkX graph DB                         |
+| **TokenBucket**       | Per-IP rate limiting              | Leaky-bucket algorithm                    |
+| **MLAnomalyDetector** | Behavioural DDoS detection        | Isolation Forest (Scikit-learn)           |
+| **IPTablesManager**   | Active mitigation                 | On-the-fly `DROP` rules via `iptables`    |
+
