@@ -18,6 +18,9 @@ import os
 import subprocess
 from collections import defaultdict, deque
 import argparse
+from gnn_security_analyzer import GNNSecurityAnalyzer, NetworkFlow
+GNN_CFG={"epochs":5,"hidden":32}
+
 
 class TokenBucket:
     def __init__(self, capacity=100, refill_rate=10, refill_period=1.0):
@@ -144,6 +147,9 @@ class DDoSDefense:
         self.iptables = IPTablesManager()
         
         self.packets = deque(maxlen=10000)
+        self.gnn = GNNSecurityAnalyzer(GNN_CFG)   # train later
+        self.gnn_trained=False
+
         self.counters = defaultdict(lambda: {"packets": 0, "bytes": 0, "last": time.time()})
         self.stats = {
             "packets_processed": 0,
@@ -266,6 +272,18 @@ class DDoSDefense:
             is_anom, score = self.detector.detect_anomaly(list(self.packets))
             if is_anom:
                 logging.info(f"[DDoS][ML] Anomaly detected (score={score:.3f})")
+        # train GNN every 10k packets
+        if self.stats["packets_processed"] % 10000 == 0 and not self.gnn_trained:
+            fl=[NetworkFlow(p["src"],p["dst"],p.get("src_port",0),p.get("dst_port",0),
+                            p["proto"],p["size"],0,p.get("flags",0),p["ttl"],p["timestamp"])
+                for p in self.packets]
+            self.gnn.train_model(fl); self.gnn_trained=True
+        # use GNN every 2k packets
+        if self.gnn_trained and self.stats["packets_processed"] % 2000 == 0:
+            score=self.gnn.predict(fl[:200])   # quick sample
+            if score>0.7:
+                logging.warning("[DDoS][GNN] high attack prob %.2f",score)
+
 
     def start(self, count=None, timeout=None):
         logging.info(f"[DDoS] Starting on interface {self.interface}")
