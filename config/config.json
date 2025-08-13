@@ -1,0 +1,31 @@
+{
+  "network_interfaces": {
+    "default_interface": "eth0",
+    "monitor_all": true,
+    "excluded_interfaces": ["lo", "docker0"]
+  },
+  "path_validation": {
+    "signature_algorithm": "SHA256",
+    "key_size": 2048,
+    "max_path_length": 10,
+    "validation_timeout": 30
+  },
+  "ddos_protection": {
+    "token_bucket": {
+      "capacity": 100,
+      "refill_rate": 10,
+      "refill_period": 1.0
+    },
+    "ml_detection": {
+      "model_type": "IsolationForest",
+      "contamination": 0.1,
+      "window_size": 1000,
+      "update_frequency": 60
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "max_file_size": "10MB",
+    "backup_count": 5
+  }
+}
