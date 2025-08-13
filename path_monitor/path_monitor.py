@@ -16,6 +16,9 @@ import hashlib
 from collections import defaultdict, deque
 import argparse
 import os
+from zero_trust_engine import ZeroTrustEngine, EntityType
+ZC_DEFAULTS={"normal_packet_rate":1000,"normal_bandwidth":10_000_000,"max_destinations":50}
+
 
 class PathValidator:
     """Cryptographic path validation system (simplified demo)"""
@@ -131,6 +134,7 @@ class PathMonitor:
     
     def __init__(self, interface="eth0", config_file=None):
         self.interface = interface
+        self.zt = ZeroTrustEngine(ZC_DEFAULTS)
         self.config = self._load_config(config_file)
         self._setup_logging()
         self.validator = PathValidator(key_size=self.config["path_validation"]["key_size"])
@@ -206,7 +210,13 @@ class PathMonitor:
 
     def _process_packet(self, pkt):
         self.stats["packets_processed"] += 1
-        pinfo = self._extract_path_info(pkt)
+        pinfo=self._extract_path_info(pkt);  # may be None
+        if not pinfo: return
+        # --- Zero-Trust check --------------------------------------------------
+        lvl, _ = self.zt.evaluate_entity(pinfo["src_ip"], EntityType.DEVICE,
+                                        {"behavior":{"packet_rate":1}})
+        if lvl is TrustLevel.UNTRUSTED:   # drop packet
+            return
         if not pinfo:
             return
         sig = self.validator.generate_path_signature(pinfo)
